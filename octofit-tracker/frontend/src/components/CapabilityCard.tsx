@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { useApi } from '../api/client.js';
+import { useEffect, useState, type ReactNode } from 'react';
+import { getJson, type ApiState } from '../api/client.js';
 
 type Props<R, I> = {
   title: string;
@@ -12,7 +12,16 @@ type Props<R, I> = {
 };
 
 export function CapabilityCard<R, I>({ title, description, path, select, emptyText, errorLabel, renderItem }: Props<R, I>) {
-  const state = useApi<R>(path);
+  const [state, setState] = useState<ApiState<R>>({ status: 'loading' });
+  useEffect(() => {
+    let active = true;
+    setState({ status: 'loading' });
+    getJson<R>(path).then(
+      (data) => { if (active) setState({ status: 'success', data }); },
+      (error: unknown) => { if (active) setState({ status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }); },
+    );
+    return () => { active = false; };
+  }, [path]);
   let body: ReactNode;
   if (state.status === 'loading') {
     body = <p role="status">Loading {errorLabel}...</p>;
